@@ -1,0 +1,8 @@
+extends layout
+
+block content
+  h1 Yelp Service
+  if error
+    p= JSON.stringify(error)
+  if data
+    p= JSON.stringify(data)
