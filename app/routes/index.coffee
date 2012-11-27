@@ -4,5 +4,6 @@ exports.index = (req, res) -> res.render "index", title: "Food Truck Twitter Str
 
 # load routes
 exports.user            = (require './user')
+exports.yelp            = (require './yelp')
 # exports.oauth_twitter   = (require './oauth_twitter')
 # exports.tweet_streamers = (require './tweet_streamers')

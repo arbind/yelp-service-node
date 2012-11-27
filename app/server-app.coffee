@@ -35,14 +35,6 @@ app.configure ->
 app.configure 'production', -> app.use express.errorHandler()
 app.configure 'development', -> app.use (express.errorHandler dumpExceptions: true, showStack: true )
 
-yelpOauthConfig =
-  consumer_key: 'EdtIXf4NMUBXh8XoysxW2Q'
-  consumer_secret: 'hMUNaKi1Oa_d7OvlHH0d2_7d7-M'
-  token: 'p4KFTaHrRR6oTGNOzGq28G9lrdgssyId'
-  token_secret: '8Zvy3k9wMPQflJs7Ztgq9w2uE1c'
-
-yelper = YelpService.client(yelpOauthConfig, redis)
-
 renderIndex = (res, searchResult)-> res.render "index", title: 'search', error: searchResult.error, data: searchResult
 
 ###
@@ -62,48 +54,15 @@ app.param 'yelpid', (req, res, next, yelpid)->
 #     help to easily encode complex values like location
 #     eg: 
 ###
-app.get '/biz', (req, res)-> 
-  searchResult = {}
-  next = (data)-> renderIndex(res, data)
+app.get '/biz', routes.yelp.biz
+app.get '/name', routes.yelp.name
+app.get '/search', routes.yelp.search
 
-  console.log req.query
-  yelpId = req.query.id || req.query.yelpid || req.query.yelpId || null
-  if yelpId?
-    yelper.biz "session-id1", yelpId, (err, biz)-> next results: biz
-
-app.get '/name', (req, res)-> 
-  searchResult = {}
-  next = (data)-> renderIndex(res, data)
-  if req.query.name? and req.query.location?
-    searchQuery = 
-      term: req.query.name
-      location: req.query.location
-      page: req.query.page || 1
-      # sort: req.query.sort || 1 +++ TODO add sort parameter throughout
-    yelper.search  searchQuery, (err, searchResults)-> next results: searchResults
-  else
-    res.render "index", title: '', data: {}
-
-app.get '/search', (req, res)->
-  searchResult = {}
-  next = (data)-> renderIndex(res, data)
-  if req.query.term? and req.query.location?
-    searchQuery = 
-      term: req.query.term
-      location: req.query.location
-      page: req.query.page || 1
-      # sort: req.query.sort || 1 +++ TODO add sort parameter throughout
-    yelper.search  searchQuery, (err, searchResults)-> next results: searchResults
-  else
-    res.render "index", title: '', data: {}
-  
 app.get ['/', '/index'], routes.index
 
 # app.get '/users', routes.user.list
-
 # TweetStreamService.on 'Tweet', (tweet)->
 #   # console.log tweet.toJSON()
-
 # TweetStreamService.on 'error', (err, streamer_screen_name, streamer_location)->
 #   console.log "!! #{streamer_screen_name}[#{streamer_location}]: Unexpected Error!"
 #   console.log err
@@ -113,7 +72,6 @@ io          = socketIO.listen httpServer
 
 httpServer.listen (app.get 'port'), -> 
   console.log "Express server listening on port #{app.get 'port'}"
-
 # Heroku doesn't yet allow use of WebSockets: setup long polling instead.
 # https://devcenter.heroku.com/articles/using-socket-io-with-node-js-on-heroku
 # https://github.com/LearnBoost/Socket.IO/wiki/Configuring-Socket.IO
@@ -126,7 +84,6 @@ io.sockets.on 'connection', (socket)->
   console.log 'connected'
 
   # socket.on 'biz', (yelp_id_list) => # lookup tweets for user
-
   # socket.on 'search', (term, location, options) => # lookup tweets for streamer
   # options: page, sort, categoryFilter, deals   : http://www.yelp.com/developers/documentation/v2/search_api
 

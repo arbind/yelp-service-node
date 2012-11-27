@@ -91,14 +91,19 @@ class YelpService
   findByName: (name, location, callback)=> (@bizByName name, location, callback)
 
   search: (term, location, page, callback)=>
-    unless callback? # set default page to 1
+    console.log 'term'
+    console.log term
+    console.log 'location'
+    console.log location
+    console.log 'page'
+    console.log page
+    console.log 'callback'
+    console.log callback
+    unless callback? and page? and 0 isnt page # if no page is given
       callback = page
       page = 1
-    @yelpSearchPage term, location, page, callback
-
-  yelpSearchPage: (term, location, page, callback)=>
     searchQuery =
-      term:     term
+      callback:     term
       location: location
       offset:   (page-1)* YelpService.resultsPerPage
       limit:    YelpService.resultsPerPage
