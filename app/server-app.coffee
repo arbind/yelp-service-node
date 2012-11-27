@@ -6,7 +6,6 @@ http          = (require 'http')
 path          = (require 'path')
 connectAssets = (require 'connect-assets')
 
-Yelp          = require('yelp')
 
 routes        = (require './routes')
 user          = (require './routes/user')
@@ -17,16 +16,6 @@ app.use express.session secret: 'foodtrucko'
 assetsPipeline = connectAssets src: 'app/assets'
 css.root = 'stylesheets'
 js.root = 'javascripts'
-
-# Yelp = require('yelp')
-# yelp = Yelp.createClient({consumer_key: 'EdtIXf4NMUBXh8XoysxW2Q',  consumer_secret: 'hMUNaKi1Oa_d7OvlHH0d2_7d7-M',  token: 'p4KFTaHrRR6oTGNOzGq28G9lrdgssyId',  token_secret: '8Zvy3k9wMPQflJs7Ztgq9w2uE1c'})
-# yelp.business("yelp-san-francisco", function(error, data) { console.log(error || data) })
-
-yelp = Yelp.createClient
-  consumer_key: 'EdtIXf4NMUBXh8XoysxW2Q'
-  consumer_secret: 'hMUNaKi1Oa_d7OvlHH0d2_7d7-M'
-  token: 'p4KFTaHrRR6oTGNOzGq28G9lrdgssyId'
-  token_secret: '8Zvy3k9wMPQflJs7Ztgq9w2uE1c'
 
 app.configure ->
   app.set 'port', process.env.PORT || process.env.VMC_APP_PORT || 8888
@@ -46,39 +35,13 @@ app.configure ->
 app.configure 'production', -> app.use express.errorHandler()
 app.configure 'development', -> app.use (express.errorHandler dumpExceptions: true, showStack: true )
 
-# doesn't seem to work for yelpId: julios-café-austin-2
-yelpBiz = (yelpid, searchResult, next)->
-  console.log 'biz searchingggg'
-  yelp.business yelpid, (error, data)->
-    console.log data
-    searchResult.error = error
-    searchResult.biz = data
-    next()
+yelpOauthConfig =
+  consumer_key: 'EdtIXf4NMUBXh8XoysxW2Q'
+  consumer_secret: 'hMUNaKi1Oa_d7OvlHH0d2_7d7-M'
+  token: 'p4KFTaHrRR6oTGNOzGq28G9lrdgssyId'
+  token_secret: '8Zvy3k9wMPQflJs7Ztgq9w2uE1c'
 
-yelpSearch = (searchQuery, searchResult, next)->
-  console.log 'searchQuery'
-  console.log searchQuery
-  term = searchQuery.term
-  location = searchQuery.location
-  lookupBiz = searchQuery.lookupBiz?  # boolean
-  if location? and term?
-    page = searchQuery.page || 1
-    offset = (page-1)*20
-    limit = if lookupBiz then 1 else 20
-    q = 
-      term: searchQuery.term
-      location: searchQuery.location
-      limit: limit
-      offset: offset
-    console.log q
-    console.log q
-    yelp.search q, (error, data)->
-      console.log data
-      searchResult.results = data
-      next()
-  else
-    next()
-
+yelper = YelpService.client(yelpOauthConfig, redis)
 
 renderIndex = (res, searchResult)-> res.render "index", title: 'search', error: searchResult.error, data: searchResult
 
@@ -90,8 +53,9 @@ app.get '/biz/:yelpid', (req, res)-> res.render "index", title: "lookup", error:
 
 app.param 'yelpid', (req, res, next, yelpid)->
   req.searchResult ||= {}
-  yelpBiz yelpid, req.searchResult, next
-
+  yelper.biz "session-id2", yelpid, (err, biz)->
+    req.searchResult =  { biz: biz }
+    next()
 
 ###
 #   Endpoints With Query Parameters
@@ -100,21 +64,38 @@ app.param 'yelpid', (req, res, next, yelpid)->
 ###
 app.get '/biz', (req, res)-> 
   searchResult = {}
-  next = ()-> renderIndex(res, searchResult)
+  next = (data)-> renderIndex(res, data)
 
+  console.log req.query
   yelpId = req.query.id || req.query.yelpid || req.query.yelpId || null
   if yelpId?
-    (yelpBiz yelpId, searchResult, next)
-  else
+    yelper.biz "session-id1", yelpId, (err, biz)-> next results: biz
+
+app.get '/name', (req, res)-> 
+  searchResult = {}
+  next = (data)-> renderIndex(res, data)
+  if req.query.name? and req.query.location?
     searchQuery = 
-      term: req.query.term || req.query.name || req.query.q || null
-      location: req.query.location || req.query.l || null
+      term: req.query.name
+      location: req.query.location
       page: req.query.page || 1
-    searchQuery.lookupBiz = if searchQuery.location? then true else false
-    (yelpSearch searchQuery, searchResult, next)
+      # sort: req.query.sort || 1 +++ TODO add sort parameter throughout
+    yelper.search  searchQuery, (err, searchResults)-> next results: searchResults
+  else
+    res.render "index", title: '', data: {}
 
 app.get '/search', (req, res)->
-  res.render "index", title: '', data: req.searchResult.results
+  searchResult = {}
+  next = (data)-> renderIndex(res, data)
+  if req.query.term? and req.query.location?
+    searchQuery = 
+      term: req.query.term
+      location: req.query.location
+      page: req.query.page || 1
+      # sort: req.query.sort || 1 +++ TODO add sort parameter throughout
+    yelper.search  searchQuery, (err, searchResults)-> next results: searchResults
+  else
+    res.render "index", title: '', data: {}
   
 app.get ['/', '/index'], routes.index
 
@@ -146,7 +127,8 @@ io.sockets.on 'connection', (socket)->
 
   # socket.on 'biz', (yelp_id_list) => # lookup tweets for user
 
-  # socket.on 'search', (term, location) => # lookup tweets for streamer
+  # socket.on 'search', (term, location, options) => # lookup tweets for streamer
+  # options: page, sort, categoryFilter, deals   : http://www.yelp.com/developers/documentation/v2/search_api
 
   # TweetStreamService.on 'Tweet', (tweet)-> 
   #   tweet.emitTo(socket) # emit any new tweets that stream in
