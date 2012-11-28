@@ -12,13 +12,17 @@ class YelpService
     YelpService.clientAPI ||= YelpLib.createClient @oauthConfig
 
   # Finding a biz by its yelp-id will cache the biz for the session
-  # doesn't seem to work for yelpId: julios-café-austin-2
+  # doesn't seem to work for yelpId with special chars: julios-café-austin-2
 
   # 4 paths:
-  # 1 biz is not in cache (1st ever search for biz)
-  # 2 biz is in cache, and in session (user already searched for biz durring the session)
-  # 3 biz is in cache, but not in session (user searched for biz before, but the session expired)
-  # 4 biz is in cache, but not in session (1st search for biz by this user, but biz was alreay put in cache from another user)
+  # 1. empty:  biz is not in cache (1st ever search for biz)
+  #    request to Yelp is required
+  # 2. cached: biz is in cache, and in session (user already searched for biz durring the session)
+  #    request to Yelp not required
+  # 3. expired biz is in cache, but not in session (user searched for biz before, but the session expired)
+  #    request to Yelp is required (return cached biz for performance, then update cache to keep it real-time )
+  # 4. shared: biz is in cache, but not in session (1st search for biz by this user, but biz was alreay put in cache from another user)
+  #    request to Yelp is required (return cached biz for performance, then update cache to keep it real-time )
   biz: (sessionId, yelpId, callback)=>
     # +++ TODO lookup from cache, queue up query to yelpAPI, if session has expired
     @redisClient.get yelpId, (err, bizJSON)=>
@@ -91,19 +95,13 @@ class YelpService
   findByName: (name, location, callback)=> (@bizByName name, location, callback)
 
   search: (term, location, page, callback)=>
-    console.log 'term'
-    console.log term
-    console.log 'location'
-    console.log location
-    console.log 'page'
-    console.log page
-    console.log 'callback'
-    console.log callback
-    unless callback? and page? and 0 isnt page # if no page is given
+    page = 1 if not page?  or page < 1# set page default to 1 if it is undefined or null
+    if page?() and not callback? # set page default to 1 if it is not given at all
       callback = page
       page = 1
+
     searchQuery =
-      callback:     term
+      term:     term
       location: location
       offset:   (page-1)* YelpService.resultsPerPage
       limit:    YelpService.resultsPerPage
@@ -115,6 +113,9 @@ class YelpService
 
   _adaptBiz: (biz)=>
     biz
+
+  _adaptBizList: (bizList)=>
+    bizList
 
   _adaptSearchResults: (searchResults)=>
     searchResults
