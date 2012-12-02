@@ -3,6 +3,7 @@ extends layout
 block content
   h1 Yelp Service
   if error
+    h1 Error
     p= JSON.stringify(error)
-  if data
-    p= JSON.stringify(data)
+
+  #biz-list

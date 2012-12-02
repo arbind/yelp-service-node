@@ -7,6 +7,19 @@ http://jamesroberts.name/blog/2010/02/22/string-functions-for-javascript-trim-to
 String.prototype.trim ||= ()->
   @replace /^\s+|\s+$/g, ""
 
+# ltrim
+String.prototype.ltrim ||= ()->
+  @replace /^\s+/g, ""
+
+# rtrim
+String.prototype.rtrim ||= ()->
+  @replace /\s+$/g, ""
+
+# array of tokens
+String.prototype.tokens ||= (delim) ->
+  list = @split(delim)
+  list = (item.trim() for item in list)
+  
 # toCamel
 String.prototype.toCamel ||= ()->
   @replace /(\-[a-z])/g, ($1)->

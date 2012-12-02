@@ -1,12 +1,48 @@
+# configure an express app: code structure and environment (test, development, production)
+
 global.node_env = process.env.NODE_ENV || global.localEnvironment || 'test'
 console.log "***********************"
 console.log "#{node_env} environment"
 console.log "-----------------------"
 
-fs = (require 'fs')
+path          = (require 'path')
+express       = (require 'express')
+expose        = (require 'express-expose')
+connectAssets = (require 'connect-assets')
 
-# global space for parameter passing :)
-global.appData = {}
+# export the app, and make it available globally
+module.exports = global.app = express()
+
+rootDir = (path.normalize __dirname + '/..')
+
+# sessionStore = new express.session.MemoryStore;
+# app.use express.cookieParser()
+# app.use express.cookieParser('your secret here')
+# app.use(express.session({ secret: 'foodtrucko', store: sessionStore }));
+
+assetsPipeline = connectAssets src: 'app/assets'
+css.root = 'stylesheets'
+js.root = 'javascripts'
+
+console.log rootDir
+app.configure ->
+  app.set 'port', process.env.PORT || process.env.VMC_APP_PORT || 8888
+  app.set 'views', (rootDir + '/app/views')
+  app.set 'view engine', 'jade'
+  app.use express.favicon()
+  app.use express.logger('dev')
+  app.use express.bodyParser()
+  app.use express.methodOverride()
+  app.use app.router
+  app.use express.static(path.join(rootDir, 'public'))
+  app.use assetsPipeline
+
+app.configure 'production', ->
+  app.use express.errorHandler()
+app.configure 'development', ->
+  app.use (express.errorHandler dumpExceptions: true, showStack: true )
+
+fs = (require 'fs')
 
 # application paths
 global.rootPath = {}
@@ -20,6 +56,7 @@ rootPath.app =        (rootPath.path + 'app/')
 rootPath.utils =      (rootPath.app + 'utils/')
 rootPath.assets =     (rootPath.app + 'assets/')
 rootPath.models =     (rootPath.app + 'models/')
+rootPath.routes =      (rootPath.app + 'routes/')
 rootPath.services =   (rootPath.app + 'services/')
 rootPath.extentions = (rootPath.app + 'extentions/')
 
@@ -61,9 +98,6 @@ global.mongoURL = null
 # load runtime environment
 require "./environments/#{node_env}"
 
-require rootPath.models + 'index'
-require rootPath.services + 'index'
-
 # connect to mondoDB
 if mongoURL
   global.mongoDB = (require 'mongoskin').db mongoURL
@@ -83,3 +117,11 @@ if redisURL
       unless debug
         redis.keys '*', (err, keys)->
           console.log "redis: #{keys.length} keys present in DB ##{redisDBNumber} "
+
+# load classes
+require rootPath.models
+require rootPath.services
+
+# Load app routes
+require rootPath.routes
+

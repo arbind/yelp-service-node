@@ -7,43 +7,47 @@ yelpOauthConfig =
 yelper = YelpService.client(yelpOauthConfig, redis)
 
 exports.biz = (req, res) ->
-  console.log "biz"
-  ( return exports.name(req, res) ) if req.query.name? and req.query.location?
-
-  yelpId = req.query.id || req.query.yelpid || req.query.yelpId || null
+  sessionId = req.query.sessionId || req.query.sessionid || 'no-session'
+  yelpId = req.query.yelpId || req.query.yelpid || req.query.id || null
   if yelpId?
-    yelper.bizById "session-id2", yelpId, (err, biz)->
+    yelper.bizById sessionId, yelpId, (err, biz)->
       data = {q:'biz', biz: biz}
-      res.render "index", title: 'biz', error: err, data: data
+      res.expose(data, 'appData') # load the data into a javascript var for the client
+      res.render "index", title: 'biz', error: err, data: data, req: req, res: res
   else
-    res.send "No yelp ID"
+    res.send "No yelpId given"
+
+exports.multiBiz = (req, res) ->
+  sessionId = req.query.sessionId || req.query.sessionid || 'no-session'
+  yelpIdList = req.query.yelpIds || req.query.yelpids || req.query.ids || null
+  yelpIdList ||= req.query.yelpIdList || req.query.yelpidList || req.query.idList || null
+  if yelpIdList?
+    yelpIdList = yelpIdList.tokens(',')
+    yelper.multiBizByIds sessionId, yelpIdList, (err, bizList)->
+      data = {q:'biz', bizList: bizList}
+      res.expose(data, 'appData') # load the data into a javascript var for the client
+      res.render "index", title: 'biz', error: err, data: data, req: req, res: res
+  else
+    res.send "No comma separated yelpIdList given"
 
 exports.name = (req, res) ->
-  console.log "name"
   if req.query.name? and req.query.location?
     yelper.bizByName req.query.name, req.query.location, (err, searchResults)-> 
       data = {q:'name', searchResults: searchResults}
-      res.render "index", title: 'name', error: err, data: data
+      res.expose(data, 'appData') # load the data into a javascript var for the client
+      res.render "index", title: 'name', error: err, data: data, req: req, res: res
   else
-    res.send "respond with a resource: yelp:name & location"
+    res.send "name and location must both be given"
 
 exports.search = (req, res) ->
-  console.log "search"
   ( return exports.name(req, res) ) if req.query.name? and req.query.location?
-
-  if req.query.term? and req.query.location?
-    yelper.search req.query.term, req.query.location, req.query.page, (err, searchResults)-> 
+  term = req.query.term | null
+  location = req.query.location || null
+  page = req.query.page || 1
+  if term? and location?
+    yelper.search term, location, page, (err, searchResults)-> 
       data = {q:'search', searchResults: searchResults}
-      res.render "index", title: 'search', error: err, data: data
+      res.expose(data, 'appData') # load the data into a javascript var for the client
+      res.render "index", title: 'search', error: err, data: data, req: req, res: res
   else
-    res.send "respond with a resource: yelp:term & location"
-
-  # if req.query.term? and req.query.location?
-  #   searchQuery = 
-  #     term: req.query.term
-  #     location: req.query.location
-  #     page: req.query.page || 1
-  #     # sort: req.query.sort || 1 +++ TODO add sort parameter throughout
-  #   yelper.search  searchQuery, (err, searchResults)-> next results: searchResults
-  # else
-  #   res.render "index", title: '', data: {}
+    res.send "term and location must both be given"

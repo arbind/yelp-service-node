@@ -1,6 +1,6 @@
 socket = io.connect()
 socket.on 'connect', ->
-  socket.on 'Tweet', (tweetData)-> ($ 'body').trigger 'Tweet', tweetData
+  socket.on 'biz', (bizData)-> ($ 'body').trigger 'biz', bizData
 
 window.loadUserTweets = (screen_name) -> socket.emit 'user-tweets', screen_name #'GGCvegas'
 window.loadStreamerTweets = (screen_name) -> socket.emit 'streamer-tweets', screen_name # 'FTMUSTXAUS'
@@ -15,41 +15,46 @@ $ ->
     interpolate : /\{\{(.+?)\}\}/g
   };
 
+  window.YelpBiz = Backbone.Model.extend()
 
-  window.Tweet = Backbone.Model.extend()
+  window.YelpBizList = Backbone.Collection.extend
+    model: YelpBiz
 
-  window.TweetStream = Backbone.Collection.extend
-    model: Tweet
-
-  window.TweetDisplay = Backbone.View.extend
-    el: "#tweet-template"
+  window.YelpBizDisplay = Backbone.View.extend
+    el: "#yelp-template"
 
     initialize: () ->
       @template = _.template @$el.html();
 
     render: () ->
-      @el = @template @model.toJSON()
+      @el = @template @model
 
-  window.TweetStreamDisplay = Backbone.View.extend
+  window.YelpBizListDisplay = Backbone.View.extend
+    el: '#biz-list'
     initialize: () ->
-      @collection = new TweetStream
-      ($ 'body').bind 'Tweet', (ev, tweetData) => @collection.add new Tweet tweetData
-      @collection.on 'add', @addTweet, @
+      @collection = new YelpBizList
+      ($ 'body').bind 'biz', (ev, bizData) => @collection.add new YelpBiz bizData
+      @collection.on 'add', @addBiz, @
       @render
 
-    addTweet: (tweet) ->
-      tweetDisplay = new TweetDisplay
-        model: tweet
-      x = tweetDisplay.render()
+    addBiz: (biz) ->
+      yelpBizDisplay = new YelpBizDisplay
+        model: biz
+      x = yelpBizDisplay.render()
       $x = ($ x)
-      ($ '#tweets').prepend $x
+      ($ '#biz-list').prepend $x
       $x.slideDown('slow')
 
     render: () ->
-      #
-  
-  window.TweetStreamApp = class TweetStreamApp
-    constructor: () ->
-      @tweetStreamDisplay = new TweetStreamDisplay
 
-  window.app = new TweetStreamApp
+  window.YelpApp = class YelpApp
+    constructor: () ->
+      @yelpBizListDisplay = new YelpBizListDisplay
+      bizList = if appData.bizList? then appData.bizList else if appData.biz? then [ appData.biz ] else if appData.searchResults? then appData.searchResults.businesses else []
+      @yelpBizListDisplay.addBiz(biz) for biz in bizList
+
+    render: () ->
+      @yelpBizListDisplay.render()
+
+  window.app = new YelpApp
+  app.render()

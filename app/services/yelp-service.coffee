@@ -24,7 +24,6 @@ class YelpService
   # 4. shared: biz is in cache, but not in session (1st search for biz by this user, but biz was alreay put in cache from another user)
   #    request to Yelp is required (return cached biz for performance, then update cache to keep it real-time )
   biz: (sessionId, yelpId, callback)=>
-    # +++ TODO lookup from cache, queue up query to yelpAPI, if session has expired
     @redisClient.get yelpId, (err, bizJSON)=>
       if err?
         console.log "redis err"
@@ -84,7 +83,19 @@ class YelpService
   bizById:  (sessionId, yelpId, callback)=> (@biz sessionId, yelpId, callback)
   findById: (sessionId, yelpId, callback)=> (@biz sessionId, yelpId, callback)
 
-  # The following search methods are not getting cached
+  # need to create a socket version of this to return each biz 1 at a time (asynchrounously) as they are retrieved
+  multiBiz: (sessionId, yelpIdList, callback)=>
+    bizList = []
+    for yelpId in yelpIdList
+      do(yelpId) =>    
+        @biz sessionId, yelpId, (err, biz)=>
+          bizList.push biz || err
+          if bizList.length is yelpIdList.length
+            callback(null, bizList)
+  multiBizByIds:  (sessionId, yelpIdList, callback)=> (@multiBiz sessionId, yelpIdList, callback)
+  findByIds:  (sessionId, yelpIdList, callback)=> (@multiBiz sessionId, yelpIdList, callback)
+
+  # Find biz by name does not cache the biz (always sends request to Yelp)
   bizByName: (name, location, callback) =>
     searchQuery = 
       term:     name
@@ -94,6 +105,7 @@ class YelpService
     @_search(searchQuery, callback)
   findByName: (name, location, callback)=> (@bizByName name, location, callback)
 
+  # search does not cache the biz (always sends request to Yelp)
   search: (term, location, page, callback)=>
     page = 1 if not page?  or page < 1# set page default to 1 if it is undefined or null
     if page?() and not callback? # set page default to 1 if it is not given at all
@@ -121,11 +133,3 @@ class YelpService
     searchResults
 
 module.exports = YelpService
-
-# redis = require('redis-url').connect('redis://127.0.0.1:6379')
-# redis.select 1
-
-# Yelp = require('yelp')
-# yelp = Yelp.createClient({consumer_key: 'EdtIXf4NMUBXh8XoysxW2Q',  consumer_secret: 'hMUNaKi1Oa_d7OvlHH0d2_7d7-M',  token: 'p4KFTaHrRR6oTGNOzGq28G9lrdgssyId',  token_secret: '8Zvy3k9wMPQflJs7Ztgq9w2uE1c'})
-# yelp.business("yelp-san-francisco", function(err, data) { console.log(err || data) })
-

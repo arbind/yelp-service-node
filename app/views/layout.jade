@@ -3,25 +3,24 @@ html
   head
     title= title
 
+    script!= javascript  // set express-expose javascript variables
+
     !=css('style')
 
     script(type='text/javascript', src='/socket.io/socket.io.js')
     !=js('application')
 
-    script#tweet-template(type='text/template')
-      blockquote.cut.tweet.no-display
-        .vcard.author
-          a(href='https://twitter.com/{{user.screen_name}}', target='_blank')
-            span.avatar
-              img.photo(src='{{user.profile_image_url}}')
-            span.fn {{user.name}}
-            span.screen-name @{{user.screen_name}}
-        .entry {{text}}
-        .footer
-          .how-long-ago {{created_at}}
-          .location {{streamer.location}}
-          a.view-details(href='https://twitter.com/{{user.screen_name}}/statuses/{{id}}', target='_blank')
-            .hidden view details
+    script#yelp-template(type='text/template')
+      blockquote.card.cut.no-display
+        p {{name}}
+        p {{review_count}}
+        p {{rating}}
+        p {{ typeof(phone)!== 'undefined' ?  phone : '' }}
+        a(href='{{url}}')
+          img(src="{{rating_img_url_large}}")
+        p
+          img(src="{{snippet_image_url}}")
+          {{snippet_text}}
 
   body
     block content
