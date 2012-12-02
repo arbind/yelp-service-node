@@ -19,8 +19,8 @@ html
         a(href='{{url}}')
           img(src="{{rating_img_url_large}}")
         p
-          img(src="{{snippet_image_url}}")
-          {{snippet_text}}
+          img(src="{{ typeof(snippet_image_url)!== 'undefined' ?  snippet_image_url : '' }}")
+          {{ typeof(snippet_text)!== 'undefined' ?  snippet_text : '' }}
 
   body
     block content

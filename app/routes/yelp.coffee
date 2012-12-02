@@ -4,7 +4,7 @@ yelpOauthConfig =
   token: 'p4KFTaHrRR6oTGNOzGq28G9lrdgssyId'
   token_secret: '8Zvy3k9wMPQflJs7Ztgq9w2uE1c'
 
-yelper = YelpService.client(yelpOauthConfig, redis)
+global.yelper = YelpService.client(yelpOauthConfig, redis)
 
 exports.biz = (req, res) ->
   sessionId = req.query.sessionId || req.query.sessionid || 'no-session'

@@ -19,3 +19,23 @@ io.configure ->
 
 io.sockets.on 'connection', (socket)->
   console.log 'socket.io connected'
+
+  socket.on 'biz', (sessionId, yelpId)->
+    if yelpId?
+      sessionId ||= 'no-session'
+      yelper.bizById sessionId, yelpId, (err, biz)-> socket.emit 'biz', biz if biz?
+
+  socket.on 'multi-biz', (sessionId, yelpIds)->
+    if yelpIds?
+      sessionId ||= 'no-session'
+      (yelper.bizById sessionId, yelpId, (err, biz)-> socket.emit 'biz', biz if biz?) for yelpId in yelpIds
+
+  socket.on 'name', (name, location)->
+    if name? and location?
+      yelper.bizByName name, location, (err, searchResults)->
+        socket.emit 'search-results', searchResults if searchResults?
+
+  socket.on 'search', (term, location, page=1)->
+    if term? and location?
+      yelper.search term, location, page, (err, searchResults)->
+        socket.emit 'search-results', searchResults if searchResults?

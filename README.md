@@ -17,7 +17,7 @@ browse to [ http://localhost:8888 ]
 ````
 mocha -R spec --compilers cofee:coffee-script spec/*/*/*
 ````
-### &#10003; The MVP #1 REST API (In Progress):
+### &#10003; The MVP #1 REST API:
 1. &#10003; find biz by yelpId
   * &#10003; /sessions/:sessionId/biz?yelpId=:yelpid
   * &#10003; returns 1 biz
@@ -35,18 +35,20 @@ mocha -R spec --compilers cofee:coffee-script spec/*/*/*
   * &#10003; caches biz for the session (conforms to yelp api developer's agreement)
   * &#10003; expire session after 30min
 
-### &Xi; MVP #2 Socket API:
-6. &Xi; biz-by-id (sessionId, yelpId)-> event
-7. &Xi; multi-biz-by-ids (sessionId, yelpIdList) event
-  * &Xi; streams each biz async 1 at a time back to calling client
+### &#10003; MVP #2 Socket API:
+6. &#10003; biz by id event: biz (sessionId, yelpId)-> event
+7. &#10003; bizList by ids event: multi-biz (sessionId, yelpIdList) event
+  * &#10003; streams each biz async 1 at a time back to calling client
+8. &#10003; biz by name event: name (name, location)-> event
+9. &#10003; biz search event: search (term, location) event
 
-### &Xi; MVP #3 integrate redis_message_capsule API:
-8. &Xi; fire notification whenever a biz by id is looked up from cache
-9. &Xi; fire notification whenever a biz by id is retrieved from yelp
-10. &Xi; biz-by-id (yelpId)-> event
-11. &Xi; multi-biz-by-ids (yelpIdList) event
-12. &Xi; biz-by-name event (name, location)->
-13. &Xi; search event (term, location [, page])
+### &Xi; MVP #3 integrate redis_message_capsule API (TODO):
+10. &Xi; fire notification whenever a biz by id is looked up from cache
+11. &Xi; fire notification whenever a biz by id is retrieved from yelp
+12. &Xi; biz by id event: biz (sessionId, yelpId)-> event
+13. &Xi; bizList by ids event: multi-biz (sessionId, yelpIdList) event
+14. &Xi; biz by name event: name (name, location)->
+15. &Xi; biz search event: search event (term, location [, page])
 
 
 ### &Xi; TO DO
